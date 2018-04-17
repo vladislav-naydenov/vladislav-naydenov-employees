@@ -14,6 +14,9 @@ public class EmployeePair {
         this.daysWorkedOnProject = daysWorkedOnProject;
     }
 
+    EmployeePair() {
+    }
+
     public long getEmployeeId1() {
         return employeeId1;
     }
@@ -24,6 +27,10 @@ public class EmployeePair {
 
     public long getDaysWorkedOnProject() {
         return daysWorkedOnProject;
+    }
+
+    public static EmployeePair empty() {
+        return new EmployeePair();
     }
 
     @Override

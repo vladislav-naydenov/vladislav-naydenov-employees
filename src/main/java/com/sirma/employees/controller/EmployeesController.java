@@ -1,6 +1,6 @@
 package com.sirma.employees.controller;
 
-import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +19,9 @@ public class EmployeesController {
     public EmployeePair filterEmployees(@NotNull List<Employee> employees) {
         requireNonNull(employees, "Parameter 'employees' cannot be null.");
 
-        Map<Long, EmployeePair> employeesPairs = mergeEmployeesToPairs(createEmployeesMap(employees));
+        List<EmployeePair> employeesPairs = mergeEmployeesToPairs(createEmployeesMap(employees));
 
         return employeesPairs
-                .values()
                 .stream()
                 .max(Comparator.comparing(EmployeePair::getDaysWorkedOnProject))
                 .orElseThrow(() -> new EmployeePairNotFoundException("Employee pair not found"));
@@ -36,20 +35,20 @@ public class EmployeesController {
                 .collect(Collectors.groupingBy(Employee::getProjectId, Collectors.toList()));
     }
 
-    private Map<Long, EmployeePair> mergeEmployeesToPairs(Map<Long, List<Employee>> employeesMap) {
-        return employeesMap.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, employees -> {
-            List<Employee> employeesList = employees.getValue();
-            Duration duration1 = Duration.between(employeesList.get(0).getDateFrom(), employeesList.get(0).getDateTo());
-            Duration duration2 = Duration.between(employeesList.get(1).getDateFrom(), employeesList.get(1).getDateTo());
+    private List<EmployeePair> mergeEmployeesToPairs(Map<Long, List<Employee>> employeesMap) {
+        return employeesMap.values()
+                .stream()
+                .map(employees -> {
+                    if (employees.size() > 1) {
+                        long daysOfFirstEmployee = ChronoUnit.DAYS.between(employees.get(0).getDateFrom(), employees.get(0).getDateTo());
+                        long daysOfSecondEmployee = ChronoUnit.DAYS.between(employees.get(1).getDateFrom(), employees.get(1).getDateTo());
+                        long totalDaysWorkedOnProject = daysOfFirstEmployee + daysOfSecondEmployee;
 
-            long duration = 0;
-            if (duration1.toDays() > duration2.toDays()) {
-                duration = duration1.toDays() - duration2.toDays();
-            } else {
-                duration = duration2.toDays() - duration1.toDays();
-            }
+                        return new EmployeePair(employees.get(0).getEmpId(), employees.get(1).getEmpId(), totalDaysWorkedOnProject);
+                    }
 
-            return new EmployeePair(employeesList.get(0).getEmpId(), employeesList.get(1).getEmpId(), duration);
-        }));
+                    return EmployeePair.empty();
+                })
+                .collect(Collectors.toList());
     }
 }
